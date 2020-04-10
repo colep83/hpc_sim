@@ -115,7 +115,7 @@ class beam:
         
         elif self.spatial == "user":
             #applies user array to custimize beam shape
-	    array = input(print("Please enter array: "))
+            array = input(print("Please enter array: "))
             pixel_pitch = 6.9e-6 
             yy = np.meshgrid(x_array,y_array)
             ampIntArr = np.zeros(np.shape(yy))#(ROWS, COLUMNS)
