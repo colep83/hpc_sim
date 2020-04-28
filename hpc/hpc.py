@@ -69,14 +69,17 @@ class CMOS_sensor:
     	digitized_image = np.digitize(np.real(image), bins)
     	return digitized_image
 
-    def capture(self, image, bitdepth, mean=3.71):
-        "Given an intensity image, will produce a more realistic version as if passing through the camera."
-        photons = self.convert_to_photons(image)
-        shot_noise = self.add_shot_noise(photons)
-        electrons = self.convert_to_electrons(shot_noise)
-        read_noise = self.add_read_noise(electrons, mean)
-        digitized_image = self.digitize(read_noise, bitdepth)
-        return digitized_image
+    def capture(self, image, bitdepth, num_img, mean=3.71):
+        "Given an array of intensity images, will produce a more realistic version as if passing through the camera."
+        dig_img_arr=[]
+        for i in range(num_img):
+            photons = self.convert_to_photons(image[i])
+            shot_noise = self.add_shot_noise(photons)
+            electrons = self.convert_to_electrons(shot_noise)
+            read_noise = self.add_read_noise(electrons, mean)
+            digitized_image = self.digitize(read_noise, bitdepth)
+            dig_img_arr.append(digitized_image)
+        return dig_img_arr
 
 class beam:
     def __init__(self, power, w0, z, freq=None, spatial="gauss"):
@@ -104,6 +107,12 @@ class beam:
         else:
             print('Entered spatial profile is not recognized. Please enter either gauss or flattop.')
 
+    def phase_shift(self, amp,):
+    	name = input(print("Please enter file path to numpy phase shift array: ")) #allow .jpeg?
+    	pha_arr = np.load(name)
+    	pha_shift = amp * np.exp(1j*pha_arr) #how does this work with amplitude array
+    	return pha_shift
+
     def generate_amplitude_map(self, x_array, y_array, x_offset=0, y_offset=0, max_val=None): #how will user input/upload array??
         "Given an x and y array will produce an amplitude map of the beam as defined. x/y offsets will displace the beam in the respective axis."
         if self.spatial == "gauss":
@@ -115,12 +124,13 @@ class beam:
         
         elif self.spatial == "user":
             #applies user array to custimize beam shape
-            array = input(print("Please enter array: "))
+            name = input(print("Please enter file path to numpy beam array: ")) #allow .jpeg? 
+            array = np.load(name)
             pixel_pitch = 6.9e-6 
             yy = np.meshgrid(x_array,y_array)
             ampIntArr = np.zeros(np.shape(yy))#(ROWS, COLUMNS)
             
-            if array.shape != (np.shape(yy)): #numpy array is (ROWS, COLUMNS)
+            if array.shape != (540,720): #numpy array is (ROWS, COLUMNS)
                 print('Entered array is not the correct size. Please enter an array with ' 
                     + str(np.shape(yy)) + ' Rows and Columns.')
             
