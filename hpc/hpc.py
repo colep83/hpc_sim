@@ -64,19 +64,22 @@ class CMOS_sensor:
 
     def digitize(self, image, bitdepth):
     	"provided a given bitdepth and image will produce bins scaled to the max well depth of the sensor and place all vlaues in an appropriate bin. Must feed in an image that has been converted to electrons."
-    	bits = int(2**bitdepth)
+    	bits = int(2**bitdepth) 
     	bins = np.linspace(0, self.pixel_well_depth, bits)
     	digitized_image = np.digitize(np.real(image), bins)
     	return digitized_image
 
-    def capture(self, image, bitdepth, mean=3.71):
-        "Given an intensity image, will produce a more realistic version as if passing through the camera."
-        photons = self.convert_to_photons(image)
-        shot_noise = self.add_shot_noise(photons)
-        electrons = self.convert_to_electrons(shot_noise)
-        read_noise = self.add_read_noise(electrons, mean)
-        digitized_image = self.digitize(read_noise, bitdepth)
-        return digitized_image
+    def capture(self, image, bitdepth, num_img, mean=3.71):
+        "Given an array of intensity images, will produce a more realistic version as if passing through the camera."
+        dig_img_arr=[]
+        for i in range(num_img):
+            photons = self.convert_to_photons(image[i])
+            shot_noise = self.add_shot_noise(photons)
+            electrons = self.convert_to_electrons(shot_noise)
+            read_noise = self.add_read_noise(electrons, mean)
+            digitized_image = self.digitize(read_noise, bitdepth)
+            dig_img_arr.append(digitized_image)
+        return dig_img_arr
 
 class beam:
     def __init__(self, power, w0, z, lam=1064e-9, freq=None, frequency_mixing=False, spatial="gauss"):
@@ -107,7 +110,14 @@ class beam:
         else:
             print('Entered spatial profile is not recognized. Please enter either gauss, flattop, or user.')
 
-    def generate_amplitude_map(self, x_array, y_array, pixel_pitch=0, array=None, max_val=None, x_offset=0, y_offset=0): #how will user input/upload array??
+
+    def phase_shift(self, amp,):
+    	name = input(print("Please enter file path to numpy phase shift array: ")) #allow .jpeg?
+    	pha_arr = np.load(name)
+    	pha_shift = amp * np.exp(1j*pha_arr) #how does this work with amplitude array
+    	return pha_shift
+
+    def generate_amplitude_map(self, x_array, y_array, x_offset=0, y_offset=0, max_val=None):
         "Given an x and y array will produce an amplitude map of the beam as defined. x/y offsets will displace the beam in the respective axis."
         if self.spatial == "gauss":
             import pykat.optics.gaussian_beams as gb
@@ -119,23 +129,17 @@ class beam:
         
         elif self.spatial == "user":
             #applies user array to custimize beam shape
+            name = input(print("Please enter file path to numpy beam array: ")) #allow .jpeg? 
+            array = np.load(name)
             yy = np.meshgrid(x_array,y_array)
             ampIntArr = np.zeros(np.shape(yy))#(ROWS, COLUMNS)
             
-            if array.shape != (np.shape(yy)): #numpy array is (ROWS, COLUMNS)
+            if array.shape != (540,720): #numpy array is (ROWS, COLUMNS)
                 print('Entered array is not the correct size. Please enter an array with ' 
                     + str(np.shape(yy)) + ' Rows and Columns.')
-            
-            if array.dtype == bool:
-                ampIntArr[array] = np.sqrt(self.power)/(pixel_pitch * np.sqrt(numPix)) 
-                return ampIntArr
-            else: #assuming the entered array isn't a string or anything stupid...
-                if max_val == None:
-                    max_val = array.max()
-                normArr = np.zeros(np.shape(yy))
-                numPix = np.count_nonzero(array) #number of pixels with nonzero value
-                normArr = array/max_val
-                ampIntArr = np.sqrt( normArr * self.power / (numPix * np.sum(normArr)) ) / pixel_pitch
+            else: 
+                Inten = self.power / (self.x_resolution * self.y_resolution * self.pixel_pitch**2)
+                ampIntArr = np.sqrt( array * Inten / np.sum(array))
                 return ampIntArr
 
         else:
