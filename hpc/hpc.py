@@ -138,7 +138,7 @@ class beam:
                 print('Entered array is not the correct size. Please enter an array with ' 
                     + str(np.shape(yy)) + ' Rows and Columns.')
             else: 
-                Inten = self.power / (388800 * self.pixel_pitch**2)
+                Inten = self.power / (array.size * pixel_pitch**2) 
                 ampIntArr = np.sqrt( array * Inten / np.sum(array))
                 return ampIntArr
 
@@ -255,7 +255,7 @@ def animate_images(images, cmap='gray', interval=25, cbar_lim=None):
     from IPython.display import HTML
 
     fig = plt.gcf()
-    im = plt.imshow(np.real(images[0]), cmap=cmap)
+    im = plt.imshow(np.real(images[0]), cmap=cmap) #some interference patterns may be cut off 
     fig.colorbar(im)
 
     if cbar_lim != None:
