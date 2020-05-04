@@ -82,12 +82,15 @@ class CMOS_sensor:
         return dig_img_arr
 
 class beam:
-    def __init__(self, power, w0, z, freq=None, spatial="gauss"):
+    def __init__(self, power, w0, z, lam=1064e-9, freq=None, frequency_mixing=False, spatial="gauss"):
         self.power = power
         self.w0 = w0
         self.freq = freq
         self.spatial = spatial
-        self.z = z 
+        self.z = z
+        self.lam = lam
+        self.frequency_mixing = frequency_mixing
+        self.amplitude_map = None
 
     def set_power(self, power):
         self.power = power
@@ -105,7 +108,8 @@ class beam:
         if spatial == "gauss" or "flattop" or "user":
             self.spatial = spatial
         else:
-            print('Entered spatial profile is not recognized. Please enter either gauss or flattop.')
+            print('Entered spatial profile is not recognized. Please enter either gauss, flattop, or user.')
+
 
     def phase_shift(self, amp,):
     	name = input(print("Please enter file path to numpy phase shift array: ")) #allow .jpeg?
@@ -113,20 +117,20 @@ class beam:
     	pha_shift = amp * np.exp(1j*pha_arr) #how does this work with amplitude array
     	return pha_shift
 
-    def generate_amplitude_map(self, x_array, y_array, x_offset=0, y_offset=0, max_val=None): #how will user input/upload array??
+    def generate_amplitude_map(self, x_array, y_array, x_offset=0, y_offset=0, max_val=None):
         "Given an x and y array will produce an amplitude map of the beam as defined. x/y offsets will displace the beam in the respective axis."
         if self.spatial == "gauss":
             import pykat.optics.gaussian_beams as gb
             q = gb.BeamParam(w0=self.w0, z=self.z)
             HG00 = gb.HG_mode(q,n=0, m=0)
             u00 = np.sqrt(self.power)*HG00.Unm(y_array-y_offset, x_array-x_offset)
+            self.amplitude_map = u00
             return u00
         
         elif self.spatial == "user":
             #applies user array to custimize beam shape
             name = input(print("Please enter file path to numpy beam array: ")) #allow .jpeg? 
             array = np.load(name)
-            pixel_pitch = 6.9e-6 
             yy = np.meshgrid(x_array,y_array)
             ampIntArr = np.zeros(np.shape(yy))#(ROWS, COLUMNS)
             
@@ -134,7 +138,11 @@ class beam:
                 print('Entered array is not the correct size. Please enter an array with ' 
                     + str(np.shape(yy)) + ' Rows and Columns.')
             else: 
+<<<<<<< HEAD
                 Inten = self.power / (388800 * pixel_pitch**2) #change to array size
+=======
+                Inten = self.power / (388800 * self.pixel_pitch**2) #fix to array size
+>>>>>>> 3e3fbd0cb5207f9e9133036b1e8af5e516e852f1
                 ampIntArr = np.sqrt( array * Inten / np.sum(array))
                 return ampIntArr
 
@@ -144,7 +152,16 @@ class beam:
             r = 1e-3
             mask = xx**2 + yy**2 < r**2
             tophat[mask] = np.sqrt(self.power)/(np.sqrt(np.pi)*r)
+            self.amplitude_map = tophat
             return tophat
+
+    def add_tilt(self, alpha, x):
+        if self.amplitude_map == None:
+            print("An amplitude map has not been generated to add a tilt to. Please do so prior to using this function.")
+
+        else:
+            tilted_beam = self.amplitude_map*np.exp(-1j*(2*np.pi/self.lam)*alpha*x)
+            self.amplitude_map = tilted_beam
 
 def add_RIN(image, mean):
     "This will be made more complex in later versions, but will add random noise on top of the image"
@@ -224,13 +241,12 @@ def novak(images):
 
 def time_array(no_images, collection_time):
 	'produces a time array resprestative of the spacing between images collected over a period of time'
-	t = np.linspace(0, collection_time, no_images)
-	return t
+	t = np.linspace(0, collection_time, no_images+1)
+	return t[1:]
 
-def generate_beatnote(amp_1, amp_2, bn_frequency, time_array):
+def generate_beatnote(amp_1, amp_2, bn_frequency, time_array, phase_offset=0):
 	"Generates an array containing the expected beat note from two gaussian amplitudes"
-    # add phase offset
-	phase = [2*np.pi*bn_frequency*i for i in time_array]
+	phase = [2*np.pi*bn_frequency*i+phase_offset for i in time_array]
 	amp1_stepped = [amp_1*np.exp(1j*i) for i in phase]
 	amp_total = [amp_2+i for i in amp1_stepped]
 	I = amp_total*np.conj(amp_total)
