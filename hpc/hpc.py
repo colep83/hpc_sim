@@ -138,7 +138,7 @@ class beam:
                 print('Entered array is not the correct size. Please enter an array with ' 
                     + str(np.shape(yy)) + ' Rows and Columns.')
             else: 
-                Inten = self.power / (self.x_resolution * self.y_resolution * self.pixel_pitch**2)
+                Inten = self.power / (388800 * self.pixel_pitch**2) #fix to array size
                 ampIntArr = np.sqrt( array * Inten / np.sum(array))
                 return ampIntArr
 
