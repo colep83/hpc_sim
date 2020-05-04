@@ -64,7 +64,7 @@ class CMOS_sensor:
 
     def digitize(self, image, bitdepth):
     	"provided a given bitdepth and image will produce bins scaled to the max well depth of the sensor and place all vlaues in an appropriate bin. Must feed in an image that has been converted to electrons."
-    	bits = int(2**bitdepth)
+    	bits = int(2**bitdepth) 
     	bins = np.linspace(0, self.pixel_well_depth, bits)
     	digitized_image = np.digitize(np.real(image), bins)
     	return digitized_image
@@ -140,10 +140,8 @@ class beam:
             else: #assuming the entered array isn't a string or anything stupid...
                 if max_val == None:
                     max_val = array.max()
-                normArr = np.zeros(np.shape(yy))
-                numPix = np.count_nonzero(array) #number of pixels with nonzero value
-                normArr = array/max_val
-                ampIntArr = np.sqrt( normArr * self.power / (numPix * np.sum(normArr)) ) / pixel_pitch
+                Inten = self.power / (self.x_resolution * self.y_resolution *self.pixel_pitch**2)
+                ampIntArr = np.sqrt( array * Inten / np.sum(array))
                 return ampIntArr
 
         else:
