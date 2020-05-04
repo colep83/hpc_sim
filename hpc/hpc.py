@@ -133,10 +133,6 @@ class beam:
             if array.shape != (540,720): #numpy array is (ROWS, COLUMNS)
                 print('Entered array is not the correct size. Please enter an array with ' 
                     + str(np.shape(yy)) + ' Rows and Columns.')
-            
-            if array.dtype == bool:
-                ampIntArr[array] = np.sqrt(self.power)/(pixel_pitch * np.sqrt(numPix)) 
-                return ampIntArr
             else: 
                 Inten = self.power / (self.x_resolution * self.y_resolution * self.pixel_pitch**2)
                 ampIntArr = np.sqrt( array * Inten / np.sum(array))
