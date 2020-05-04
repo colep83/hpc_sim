@@ -137,7 +137,7 @@ class beam:
             if array.dtype == bool:
                 ampIntArr[array] = np.sqrt(self.power)/(pixel_pitch * np.sqrt(numPix)) 
                 return ampIntArr
-            else: #assuming the entered array isn't a string or anything stupid...
+            else: 
                 Inten = self.power / (self.x_resolution * self.y_resolution * self.pixel_pitch**2)
                 ampIntArr = np.sqrt( array * Inten / np.sum(array))
                 return ampIntArr
