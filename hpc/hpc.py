@@ -39,6 +39,7 @@ class CMOS_sensor:
         return noisey_image
 
     def add_shot_noise(self, image):
+        np.random.seed()
         shot_noise = np.random.poisson(np.real(image))
         return shot_noise
 
@@ -63,21 +64,23 @@ class CMOS_sensor:
         return image_electrons
 
     def digitize(self, image, bitdepth):
-    	"provided a given bitdepth and image will produce bins scaled to the max well depth of the sensor and place all vlaues in an appropriate bin. Must feed in an image that has been converted to electrons."
-    	bits = int(2**bitdepth) 
-    	bins = np.linspace(0, self.pixel_well_depth, bits)
-    	digitized_image = np.digitize(np.real(image), bins)
-    	return digitized_image
+        "provided a given bitdepth and image will produce bins scaled to the max well depth of the sensor and place all vlaues in an appropriate bin. Must feed in an image that has been converted to electrons."
+        bits = int(2**bitdepth) 
+        bins = np.linspace(0, self.pixel_well_depth, bits)
+        digitized_image = np.digitize(np.real(image), bins)
+        if digitized_image.max == bins.max:
+            print("Image is saturated")
+        return digitized_image
 
     def capture(self, image, bitdepth, num_img, mean=3.71):
         "Given an array of intensity images, will produce a more realistic version as if passing through the camera."
         dig_img_arr=[]
-        for i in range(num_img):
+        for i in range(num_img): #change num image to a .size var 
             photons = self.convert_to_photons(image[i])
             shot_noise = self.add_shot_noise(photons)
             electrons = self.convert_to_electrons(shot_noise)
-            read_noise = self.add_read_noise(electrons, mean)
-            digitized_image = self.digitize(read_noise, bitdepth)
+            #read_noise = self.add_read_noise(electrons, mean)
+            digitized_image = self.digitize(electrons, bitdepth)
             dig_img_arr.append(digitized_image)
         return dig_img_arr
 
@@ -138,7 +141,7 @@ class beam:
                 print('Entered array is not the correct size. Please enter an array with ' 
                     + str(np.shape(yy)) + ' Rows and Columns.')
             else: 
-                Inten = self.power / (array.size * pixel_pitch**2) #change to array size
+                Inten = self.power / (array.size * pixel_pitch**2) 
                 ampIntArr = np.sqrt( array * Inten / np.sum(array))
                 return ampIntArr
 
@@ -255,7 +258,7 @@ def animate_images(images, cmap='gray', interval=25, cbar_lim=None):
     from IPython.display import HTML
 
     fig = plt.gcf()
-    im = plt.imshow(np.real(images[0]), cmap=cmap) #some interference patterns may be cut off 
+    im = plt.imshow(np.real(images[0]), cmap=cmap) 
     fig.colorbar(im)
 
     if cbar_lim != None:
