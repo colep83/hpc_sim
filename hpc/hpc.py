@@ -137,7 +137,7 @@ class beam:
             yy = np.meshgrid(x_array,y_array)
             ampIntArr = np.zeros(np.shape(yy))#(ROWS, COLUMNS)
             
-            if array.shape != (540,720): #numpy array is (ROWS, COLUMNS)
+            if array.shape != (540, 720): #numpy array is (ROWS, COLUMNS)
                 print('Entered array is not the correct size. Please enter an array with ' 
                     + str(np.shape(yy)) + ' Rows and Columns.')
             else: 
