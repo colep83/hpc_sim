@@ -57,9 +57,11 @@ class CMOS_sensor:
     def convert_to_electrons(self, image, convert_to_photons=False):
         if convert_to_photons == False:
             image_electrons = image*self.quantum_eff
+            image_electrons = image_electrons.astype(int)
         else:
             image_photons = self.convert_to_photons(image)
             image_electrons = image_photons*self.quantum_eff
+            image_electrons = image_electrons.astype(int)
 
         return image_electrons
 
@@ -67,8 +69,8 @@ class CMOS_sensor:
         "provided a given bitdepth and image will produce bins scaled to the max well depth of the sensor and place all vlaues in an appropriate bin. Must feed in an image that has been converted to electrons."
         bits = int(2**bitdepth) 
         bins = np.linspace(0, self.pixel_well_depth, bits)
-        digitized_image = np.digitize(np.real(image), bins)
-        if digitized_image.max == bins.max:
+        digitized_image = np.digitize(np.real(image), bins) 
+        if np.max(digitized_image) >= (bits-1):  #this doesn't work :/
             print("Image is saturated")
         return digitized_image
 
@@ -133,12 +135,13 @@ class beam:
         elif self.spatial == "user":
             #applies user array to custimize beam shape
             name = input(print("Please enter file path to numpy beam array: ")) #allow .jpeg? 
+            pixel_pitch = 6.9e-6
             array = np.load(name)
-            yy = np.meshgrid(x_array,y_array)
+            xx, yy = np.meshgrid(x_array,y_array)
             ampIntArr = np.zeros(np.shape(yy))#(ROWS, COLUMNS)
             
-            if array.shape != (540, 720): #numpy array is (ROWS, COLUMNS)
-                print('Entered array is not the correct size. Check Changes. Please enter an array with ' 
+            if array.shape != (xx.shape): #numpy array is (ROWS, COLUMNS) #need to generalize, why doesnt xx work
+                print('Entered array is not the correct size. Please enter an array with ' 
                     + str(np.shape(yy)) + ' Rows and Columns.')
             else: 
                 Inten = self.power / (array.size * pixel_pitch**2) 
