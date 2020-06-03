@@ -138,7 +138,7 @@ class beam:
             ampIntArr = np.zeros(np.shape(yy))#(ROWS, COLUMNS)
             
             if array.shape != (540, 720): #numpy array is (ROWS, COLUMNS)
-                print('Entered array is not the correct size. Please enter an array with ' 
+                print('Entered array is not the correct size. Check Changes. Please enter an array with ' 
                     + str(np.shape(yy)) + ' Rows and Columns.')
             else: 
                 Inten = self.power / (array.size * pixel_pitch**2) 
