@@ -81,8 +81,8 @@ class CMOS_sensor:
             photons = self.convert_to_photons(image[i])
             shot_noise = self.add_shot_noise(photons)
             electrons = self.convert_to_electrons(shot_noise)
-            #read_noise = self.add_read_noise(electrons, mean)
-            digitized_image = self.digitize(electrons, bitdepth)
+            read_noise = self.add_read_noise(electrons, mean)
+            digitized_image = self.digitize(read_noise, bitdepth)
             dig_img_arr.append(digitized_image)
         return dig_img_arr
 
@@ -205,13 +205,11 @@ def carre(images):
                 I2 = images[i-2]
                 I3 = images[i-1]
                 I4 = images[i]
-            #print(type(I1), type(I2),type(I3),type(I4))
                 A = I2-I3
                 B = I1-I4
                 num = (A+B)*(3*A-B)
                 num = np.sqrt(abs(num))
                 pm = np.sign(A)
-                #num = np.sign(I2-I3)*np.sqrt(np.abs(I1+I2-I3-I4)*(3*(I2-I3)-I1+I4))
                 denom = I2+I3-I1-I4
                 phi = np.arctan2(pm*num, denom)
                 phase.append(phi)
