@@ -39,6 +39,7 @@ class CMOS_sensor:
         return noisey_image
 
     def add_shot_noise(self, image):
+        np.random.seed()
         shot_noise = np.random.poisson(np.real(image))
         return shot_noise
 
@@ -56,28 +57,32 @@ class CMOS_sensor:
     def convert_to_electrons(self, image, convert_to_photons=False):
         if convert_to_photons == False:
             image_electrons = image*self.quantum_eff
+            image_electrons = image_electrons.astype(int)
         else:
             image_photons = self.convert_to_photons(image)
             image_electrons = image_photons*self.quantum_eff
+            image_electrons = image_electrons.astype(int)
 
         return image_electrons
 
     def digitize(self, image, bitdepth):
-    	"provided a given bitdepth and image will produce bins scaled to the max well depth of the sensor and place all vlaues in an appropriate bin. Must feed in an image that has been converted to electrons."
-    	bits = int(2**bitdepth) 
-    	bins = np.linspace(0, self.pixel_well_depth, bits)
-    	digitized_image = np.digitize(np.real(image), bins)
-    	return digitized_image
+        "provided a given bitdepth and image will produce bins scaled to the max well depth of the sensor and place all vlaues in an appropriate bin. Must feed in an image that has been converted to electrons."
+        bits = int(2**bitdepth) 
+        bins = np.linspace(0, self.pixel_well_depth, bits)
+        digitized_image = np.digitize(np.real(image), bins) 
+        if np.max(digitized_image) >= (bits-1):  #this doesn't work :/
+            print("Image is saturated")
+        return digitized_image
 
     def capture(self, image, bitdepth, num_img, mean=3.71):
         "Given an array of intensity images, will produce a more realistic version as if passing through the camera."
         dig_img_arr=[]
-        for i in range(num_img):
+        for i in range(num_img): #change num image to a .size var 
             photons = self.convert_to_photons(image[i])
             shot_noise = self.add_shot_noise(photons)
             electrons = self.convert_to_electrons(shot_noise)
-            read_noise = self.add_read_noise(electrons, mean)
-            digitized_image = self.digitize(read_noise, bitdepth)
+            #read_noise = self.add_read_noise(electrons, mean)
+            digitized_image = self.digitize(electrons, bitdepth)
             dig_img_arr.append(digitized_image)
         return dig_img_arr
 
@@ -130,11 +135,12 @@ class beam:
         elif self.spatial == "user":
             #applies user array to custimize beam shape
             name = input(print("Please enter file path to numpy beam array: ")) #allow .jpeg? 
+            pixel_pitch = 6.9e-6
             array = np.load(name)
-            yy = np.meshgrid(x_array,y_array)
+            xx, yy = np.meshgrid(x_array,y_array)
             ampIntArr = np.zeros(np.shape(yy))#(ROWS, COLUMNS)
             
-            if array.shape != (540,720): #numpy array is (ROWS, COLUMNS)
+            if array.shape != (xx.shape): #numpy array is (ROWS, COLUMNS) #need to generalize, why doesnt xx work
                 print('Entered array is not the correct size. Please enter an array with ' 
                     + str(np.shape(yy)) + ' Rows and Columns.')
             else: 
@@ -238,7 +244,7 @@ def novak(images):
 def time_array(no_images, collection_time):
 	'produces a time array resprestative of the spacing between images collected over a period of time'
 	t = np.linspace(0, collection_time, no_images+1)
-	return t[1:]
+	return t
 
 def generate_beatnote(amp_1, amp_2, bn_frequency, time_array, phase_offset=0):
 	"Generates an array containing the expected beat note from two gaussian amplitudes"
@@ -255,7 +261,7 @@ def animate_images(images, cmap='gray', interval=25, cbar_lim=None):
     from IPython.display import HTML
 
     fig = plt.gcf()
-    im = plt.imshow(np.real(images[0]), cmap=cmap) #some interference patterns may be cut off 
+    im = plt.imshow(np.real(images[0]), cmap=cmap) 
     fig.colorbar(im)
 
     if cbar_lim != None:
