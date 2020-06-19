@@ -244,7 +244,7 @@ def novak(images):
 def time_array(no_images, collection_time):
 	'produces a time array resprestative of the spacing between images collected over a period of time'
 	t = np.linspace(0, collection_time, no_images+1)
-	return t[1:]
+	return t
 
 def generate_beatnote(amp_1, amp_2, bn_frequency, time_array, phase_offset=0):
 	"Generates an array containing the expected beat note from two gaussian amplitudes"
