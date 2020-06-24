@@ -12,7 +12,7 @@ class CMOS_sensor:
     and then provide functionality for adding noise to that images as well as digitization.
     Default values are those for the Blackfly S, however this can be used generally.
     """
-    def __init__(self, pixel_pitch=6.9e-6, x_resolution=720, y_resolution=540, exposure_time=4e-6, quantum_eff=0.03, pixel_well_depth=22187):
+    def __init__(self, pixel_pitch=6.9e-6, x_resolution=720, y_resolution=540, exposure_time=4e-6, quantum_eff=0.03, gain=0, pixel_well_depth=22187):
         "Intializes a CMOS sensor with requested dimensions and generates x and y arrays to generate desired images."
         self.pixel_pitch = pixel_pitch
         self.x_resolution = x_resolution
@@ -20,11 +20,15 @@ class CMOS_sensor:
         self.exposure_time = exposure_time
         self.quantum_eff = quantum_eff
         self.pixel_well_depth = pixel_well_depth
+        self.gain = gain
         self.x_array = np.linspace(-self.pixel_pitch*(self.x_resolution/2), self.pixel_pitch*(self.x_resolution/2), x_resolution)
         self.y_array = np.linspace(-self.pixel_pitch*(self.y_resolution/2), self.pixel_pitch*(self.y_resolution/2), y_resolution)
 
     def set_pixel_well_depth(pixel_well_depth):
         self.pixel_well_depth = pixel_well_depth
+
+    def set_gain(gain):
+        self.gain = gain
 
     def set_quantum_eff(quantum_eff): 
         self.quantum_eff = quantum_eff
@@ -57,26 +61,34 @@ class CMOS_sensor:
     def convert_to_electrons(self, image, convert_to_photons=False):
         if convert_to_photons == False:
             image_electrons = image*self.quantum_eff
+            image_electrons = image_electrons*10**(self.gain/10)
             image_electrons = image_electrons.astype(int)
+
         else:
             image_photons = self.convert_to_photons(image)
             image_electrons = image_photons*self.quantum_eff
+            image_electrons = image_electrons*10**(self.gain/10)
             image_electrons = image_electrons.astype(int)
 
         return image_electrons
 
     def digitize(self, image, bitdepth):
         "provided a given bitdepth and image will produce bins scaled to the max well depth of the sensor and place all vlaues in an appropriate bin. Must feed in an image that has been converted to electrons."
+
         bits = int(2**bitdepth) 
         bins = np.linspace(0, self.pixel_well_depth, bits)
-        digitized_image = np.digitize(np.real(image), bins) 
+        digitized_image = np.digitize(np.real(image), bins)
+
         if np.max(digitized_image) >= (bits-1):  #this doesn't work :/
             print("Image is saturated")
+
         return digitized_image
 
     def capture(self, image, bitdepth, num_img, mean=3.71):
         "Given an array of intensity images, will produce a more realistic version as if passing through the camera."
+
         dig_img_arr=[]
+
         for i in range(num_img): #change num image to a .size var 
             photons = self.convert_to_photons(image[i])
             shot_noise = self.add_shot_noise(photons)
@@ -84,6 +96,7 @@ class CMOS_sensor:
             read_noise = self.add_read_noise(electrons, mean)
             digitized_image = self.digitize(read_noise, bitdepth)
             dig_img_arr.append(digitized_image)
+
         return dig_img_arr
 
 class beam:
@@ -124,6 +137,7 @@ class beam:
 
     def generate_amplitude_map(self, x_array, y_array, x_offset=0, y_offset=0, max_val=None):
         "Given an x and y array will produce an amplitude map of the beam as defined. x/y offsets will displace the beam in the respective axis."
+
         if self.spatial == "gauss":
             import pykat.optics.gaussian_beams as gb
             q = gb.BeamParam(w0=self.w0, z=self.z)
@@ -158,6 +172,7 @@ class beam:
             return tophat
 
     def add_tilt(self, alpha, x):
+
         if self.amplitude_map == None:
             print("An amplitude map has not been generated to add a tilt to. Please do so prior to using this function.")
 
@@ -167,12 +182,14 @@ class beam:
 
 def add_RIN(image, mean):
     "This will be made more complex in later versions, but will add random noise on top of the image"
+
     noise = np.abs(np.random.normal(loc=mean, size=image.shape))
     noisey_image = image + noise
     return noisey_image
 
 def four_point(images):
     "Four point phase algorithm"
+
     phase = []
 
     if len(images) < 4:
@@ -218,6 +235,7 @@ def carre(images):
     
 def novak(images):
     'Novak phase algorithm'
+    
     phase = []
     
     for i in range(len(images)):
