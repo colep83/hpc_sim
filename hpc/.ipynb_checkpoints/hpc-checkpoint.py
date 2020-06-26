@@ -91,13 +91,14 @@ class CMOS_sensor:
     def capture(self, image, bitdepth, mean=3.71):
         "Given an array of intensity images, will produce a more realistic version as if passing through the camera."
 
-        photons = self.convert_to_photons(image)
+        photons = self.convert_to_photons(image[i])
         shot_noise = self.add_shot_noise(photons)
         electrons = self.convert_to_electrons(shot_noise)
         read_noise = self.add_read_noise(electrons, mean)
         digitized_image = self.digitize(read_noise, bitdepth)
+        dig_img_arr.append(digitized_image)
 
-        return digitized_image
+        return dig_imgs
 
 class beam:
     def __init__(self, power, w0, z, lam=1064e-9, freq=None, frequency_mixing=False, spatial="gauss"):
