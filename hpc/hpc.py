@@ -12,7 +12,7 @@ class CMOS_sensor:
     and then provide functionality for adding noise to that images as well as digitization.
     Default values are those for the Blackfly S, however this can be used generally.
     """
-    def __init__(self, pixel_pitch=6.9e-6, x_resolution=720, y_resolution=540, exposure_time=4e-6, quantum_eff=0.03, gain=0, pixel_well_depth=22187):
+    def __init__(self, pixel_pitch=6.9e-6, x_resolution=720, y_resolution=540, exposure_time=4e-6, quantum_eff=0.03, gain=0, pixel_well_depth=22187, gamma=0):
         "Intializes a CMOS sensor with requested dimensions and generates x and y arrays to generate desired images."
         self.pixel_pitch = pixel_pitch
         self.x_resolution = x_resolution
@@ -21,6 +21,7 @@ class CMOS_sensor:
         self.quantum_eff = quantum_eff
         self.pixel_well_depth = pixel_well_depth
         self.gain = gain
+        self.gamma = gamma
         self.x_array = np.linspace(-self.pixel_pitch*(self.x_resolution/2), self.pixel_pitch*(self.x_resolution/2), x_resolution)
         self.y_array = np.linspace(-self.pixel_pitch*(self.y_resolution/2), self.pixel_pitch*(self.y_resolution/2), y_resolution)
 
@@ -29,6 +30,9 @@ class CMOS_sensor:
 
     def set_gain(gain):
         self.gain = gain
+
+    def set_gamma(gamma):
+        self.gamma = gamma
 
     def set_quantum_eff(quantum_eff): 
         self.quantum_eff = quantum_eff
