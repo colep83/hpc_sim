@@ -25,19 +25,19 @@ class CMOS_sensor:
         self.x_array = np.linspace(-self.pixel_pitch*(self.x_resolution/2), self.pixel_pitch*(self.x_resolution/2), x_resolution)
         self.y_array = np.linspace(-self.pixel_pitch*(self.y_resolution/2), self.pixel_pitch*(self.y_resolution/2), y_resolution)
 
-    def set_pixel_well_depth(pixel_well_depth):
+    def set_pixel_well_depth(self, pixel_well_depth):
         self.pixel_well_depth = pixel_well_depth
 
-    def set_gain(gain):
+    def set_gain(self, gain):
         self.gain = gain
 
-    def set_gamma(gamma):
+    def set_gamma(self, gamma):
         self.gamma = gamma
 
-    def set_quantum_eff(quantum_eff): 
+    def set_quantum_eff(self, quantum_eff): 
         self.quantum_eff = quantum_eff
 
-    def set_exposure_time(exposure_time):
+    def set_exposure_time(self, exposure_time):
         self.exposure_time = exposure_time
 
     def add_read_noise(self, image, mean=3.71):
