@@ -1,4 +1,4 @@
-# Mauricio Diaz-Ortiz 
+# Mauricio Diaz-Ortiz
 # 27 March 2020
 # mdiazort@ufl.edu
 
@@ -34,7 +34,7 @@ class CMOS_sensor:
     def set_gamma(self, gamma):
         self.gamma = gamma
 
-    def set_quantum_eff(self, quantum_eff): 
+    def set_quantum_eff(self, quantum_eff):
         self.quantum_eff = quantum_eff
 
     def set_exposure_time(self, exposure_time):
@@ -48,14 +48,14 @@ class CMOS_sensor:
 
     def add_shot_noise(self, image):
         np.random.seed()
-        shot_noise = np.random.poisson(np.real(image))
+        shot_noise = abs(np.random.poisson(lam=np.real(abs(image))))
         return shot_noise
 
     def convert_to_photons(self, image, wavelength=1064e-9):
         h = 6.6260689158E-34 #J/s
         c = 2.99792458E8
-        lam = 1064e-9
-        E = h*c/lam #photon energy
+        lamda_wv = 1064e-9
+        E = h*c/lamda_wv #photon energy
 
         image_E = np.real(image)*self.pixel_pitch**2*self.exposure_time
         image_photons = np.floor(image_E/E)
@@ -78,15 +78,16 @@ class CMOS_sensor:
 
     def digitize(self, image, bitdepth):
         "provided a given bitdepth and image will produce bins scaled to the max well depth of the sensor and place all vlaues in an appropriate bin. Must feed in an image that has been converted to electrons."
-
-        bits = int(2**bitdepth) 
+        SatBool = 0
+        bits = int(2**bitdepth)
         bins = np.linspace(0, self.pixel_well_depth, bits)
         digitized_image = np.digitize(np.real(image), bins)
 
         if np.max(digitized_image) >= (bits-1):  #this doesn't work :/
             print("Image is saturated")
+            SatBool = 1
 
-        return digitized_image
+        return digitized_image, SatBool
 
     def capture(self, image, bitdepth, mean=3.71):
         "Given an array of intensity images, will produce a more realistic version as if passing through the camera."
@@ -95,18 +96,18 @@ class CMOS_sensor:
         shot_noise = self.add_shot_noise(photons)
         electrons = self.convert_to_electrons(shot_noise)
         read_noise = self.add_read_noise(electrons, mean)
-        digitized_image = self.digitize(read_noise, bitdepth)
+        digitized_image, SatBool = self.digitize(read_noise, bitdepth)
 
-        return digitized_image
+        return digitized_image, SatBool
 
 class beam:
-    def __init__(self, power, w0, z, lam=1064e-9, freq=None, frequency_mixing=False, spatial="gauss"):
+    def __init__(self, power, w0, z, lamda_wv=1064e-9, freq=None, frequency_mixing=False, spatial="gauss"):
         self.power = power
         self.w0 = w0
         self.freq = freq
         self.spatial = spatial
         self.z = z
-        self.lam = lam
+        self.lamda_wv = lamda_wv
         self.frequency_mixing = frequency_mixing
         self.amplitude_map = None
 
@@ -145,20 +146,20 @@ class beam:
             u00 = np.sqrt(self.power)*HG00.Unm(y_array-y_offset, x_array-x_offset)
             self.amplitude_map = u00
             return u00
-        
+
         elif self.spatial == "user":
             #applies user array to custimize beam shape
-            name = input(print("Please enter file path to numpy beam array: ")) #allow .jpeg? 
+            name = input(print("Please enter file path to numpy beam array: ")) #allow .jpeg?
             pixel_pitch = 6.9e-6
             array = np.load(name)
             xx, yy = np.meshgrid(x_array,y_array)
             ampIntArr = np.zeros(np.shape(yy))#(ROWS, COLUMNS)
-            
+
             if array.shape != (xx.shape): #numpy array is (ROWS, COLUMNS) #need to generalize, why doesnt xx work
-                print('Entered array is not the correct size. Please enter an array with ' 
+                print('Entered array is not the correct size. Please enter an array with '
                     + str(np.shape(yy)) + ' Rows and Columns.')
-            else: 
-                Inten = self.power / (array.size * pixel_pitch**2) 
+            else:
+                Inten = self.power / (array.size * pixel_pitch**2)
                 ampIntArr = np.sqrt( array * Inten / np.sum(array))
                 return ampIntArr
 
@@ -177,7 +178,7 @@ class beam:
             print("An amplitude map has not been generated to add a tilt to. Please do so prior to using this function.")
 
         else:
-            tilted_beam = self.amplitude_map*np.exp(-1j*(2*np.pi/self.lam)*alpha*x)
+            tilted_beam = self.amplitude_map*np.exp(-1j*(2*np.pi/self.lamda_wv)*alpha*x)
             self.amplitude_map = tilted_beam
 
 def add_RIN(image, mean):
@@ -231,13 +232,13 @@ def carre(images):
                 phi = np.arctan2(pm*num, denom)
                 phase.append(phi)
 
-    return phase  
-    
+    return phase
+
 def novak(images):
     'Novak phase algorithm'
-    
+
     phase = []
-    
+
     for i in range(len(images)):
         if i%4 == 0 and i != 0:
             I1 = images[i-4]
@@ -245,7 +246,7 @@ def novak(images):
             I3 = images[i-2]
             I4 = images[i-1]
             I5 = images[i]
-            
+
             d = 2*I3 - I1 - I5
             a24 = I2 - I4
             a15 = I1 - I5
@@ -254,13 +255,13 @@ def novak(images):
             phase.append(np.arctan2(pm*n,d))
 
         else: continue
-    
+
     return phase
 
 def time_array(no_images, collection_time):
 	'produces a time array resprestative of the spacing between images collected over a period of time'
 	t = np.linspace(0, collection_time, no_images+1)
-	return t
+	return t[1:]
 
 def generate_beatnote(amp_1, amp_2, bn_frequency, time_array, phase_offset=0):
 	"Generates an array containing the expected beat note from two gaussian amplitudes"
@@ -277,18 +278,18 @@ def animate_images(images, cmap='gray', interval=25, cbar_lim=None):
     from IPython.display import HTML
 
     fig = plt.gcf()
-    im = plt.imshow(np.real(images[0]), cmap=cmap) 
+    im = plt.imshow(np.real(images[0]), cmap=cmap)
     fig.colorbar(im)
 
     if cbar_lim != None:
         plt.clim(vmin=0,vmax=cbar_lim)
 
     plt.close()
-    
+
     def animate(i):
         im.set_data(np.real(images[i]))
         return im,
-    
+
     anim = animation.FuncAnimation(fig, animate, frames=range(0,len(images)), interval=interval, repeat=True)
     display(HTML(anim.to_jshtml()))
 
